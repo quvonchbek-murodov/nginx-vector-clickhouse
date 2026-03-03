@@ -1,0 +1,39 @@
+[sources.nginx]
+type = "file"
+include = ["/var/log/nginx/access.log"]
+read_from = "end"
+
+[transforms.parse]
+type = "remap"
+inputs = ["nginx"]
+source = '''
+parsed, err = parse_regex(
+  .message,
+  r'^(?P<ip>\S+) - - \[(?P<time>[^\]]+)\] "(?P<channel>\d+)" (?P<status>\d+) (?P<bytes>\d+) "[^"]*" "[^"]*" "[^"]*" (?P<request_time>[\d.]+)'
+)
+
+if err != null {
+  abort
+}
+
+.ip = parsed.ip
+.server_name = "default"
+.channel = parsed.channel
+.status = to_int!(parsed.status)
+.bytes = to_int!(parsed.bytes)
+.request_time = to_float!(parsed.request_time)
+
+ts = parse_timestamp!(parsed.time, "%d/%b/%Y:%H:%M:%S %z")
+.event_time = format_timestamp!(ts, "%Y-%m-%d %H:%M:%S")
+'''
+
+[sinks.clickhouse]
+type = "clickhouse"
+inputs = ["parse"]
+endpoint = "http://clickhouse.example"
+database = "streaming"
+table = "nginx_logs"
+auth.strategy = "basic"
+auth.user = "admin"
+auth.password = "admin"
+compression = "gzip"
