@@ -24,7 +24,7 @@ if err != null {
 .request_time = to_float!(parsed.request_time)
 
 ts = parse_timestamp!(parsed.time, "%d/%b/%Y:%H:%M:%S %z")
-.event_time = format_timestamp!(ts, "%Y-%m-%d %H:%M:%S")
+.event_time = format_timestamp!(ts, "%Y-%m-%d %H:%M:%S", timezone: "UTC")
 '''
 
 [sinks.clickhouse]
